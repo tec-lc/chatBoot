@@ -140,12 +140,16 @@ while start == True:
 
             zap.click(id_cliente,cont_msg)
             zap.pause(1)
+
             #----obter ultima conversa
             ultimaCoversa=zap.html_array(id_ultimaCoversa)
-            ultimaCoversa=ultimaCoversa[-3]['html']
-            print(ultimaCoversa)
 
             if ultimaCoversa != False :
+                ultimaCoversa=ultimaCoversa[-3].get('text', False)
+    
+                #ultimaCoversa=ultimaCoversa[-3]['text']
+                print(ultimaCoversa)
+
                 zap.pause(1)
                 VaiResponder=respostaCorreta(ultimaCoversa);
                 if VaiResponder != False :

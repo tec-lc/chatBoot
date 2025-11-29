@@ -1,5 +1,6 @@
 # selenium_web_wrapper.py
 # Versão atualizada: adiciona html_array, attr_array, abre, sessao, sessao_salve, sessao_drop
+# + tratamento consistente de índices para evitar erros (retornam False quando índice inválido)
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -89,6 +90,31 @@ class Web:
         finally:
             self._start_driver()
 
+    # ---------------------- helper de índice ----------------------
+    def _validate_index(self, elems, index):
+        """
+        Normaliza e valida o índice para listas retornadas por _find.
+        - index None -> 0
+        - index negative -> 0
+        - index não inteiro -> tenta converter para int, se falhar retorna None
+        - se index >= len(elems) -> retorna None (índice inválido)
+        - retorna índice válido (int) ou None
+        """
+        if elems is None:
+            return None
+        if index is None:
+            idx = 0
+        else:
+            try:
+                idx = int(index)
+            except Exception:
+                return None
+        if idx < 0:
+            idx = 0
+        if idx >= len(elems):
+            return None
+        return idx
+
     # ---------------------- funções existentes (com pequenas adaptações) ----------------------
     def url(self, endereco: str):
         """Abre a URL informada"""
@@ -133,17 +159,17 @@ class Web:
         - html('p') -> pega o primeiro <p>
         - html('p', 0) -> pega o primeiro <p>
         - html('p', 2) -> pega o terceiro <p>
+        Se o índice for inválido ou não existir elementos -> retorna False
         """
         elems = self._find(selector)
         if not elems:
             return False
 
-        if index < 0:
-            index = 0
-        if index >= len(elems):
+        idx = self._validate_index(elems, index)
+        if idx is None:
             return False
 
-        el = elems[index]
+        el = elems[idx]
 
         try:
             return el.text
@@ -152,8 +178,10 @@ class Web:
 
 
     def html_array(self, selector):
-        """Retorna lista de dicionários [{'text':..., 'html':...}, ...] ou [] se não existir"""
+        """Retorna lista de dicionários [{'text':..., 'html':...}, ...] ou False se não existir nenhum elemento"""
         elems = self._find(selector)
+        if not elems:
+            return False
         results = []
         for e in elems:
             try:
@@ -163,22 +191,25 @@ class Web:
             results.append({'text': e.text, 'html': inner})
         return results
 
+
     def click(self, selector, index=0):
         """
         Clica no elemento pelo índice.
         Ex:
             click('h1')      -> index 0
             click('h1', 2)   -> terceiro h1 encontrado
+
+        Retorna False se o elemento/índice não existir.
         """
         elems = self._find(selector)
         if not elems:
             return False
 
-        # garante index válido
-        if index < 0 or index >= len(elems):
+        idx = self._validate_index(elems, index)
+        if idx is None:
             return False
 
-        elem = elems[index]
+        elem = elems[idx]
 
         try:
             elem.click()
@@ -216,12 +247,11 @@ class Web:
             if not elems:
                 return False
 
-            if index < 0:
-                index = 0
-            if index >= len(elems):
+            idx = self._validate_index(elems, index)
+            if idx is None:
                 return False
 
-            el = elems[index]
+            el = elems[idx]
             try:
                 # tenta focus via JS (mais robusto)
                 self._driver.execute_script("arguments[0].scrollIntoView({behavior:'auto',block:'center'}); arguments[0].focus();", el)
@@ -254,6 +284,7 @@ class Web:
         - zap.escreve('ola','input') -> digita no primeiro input
         - zap.escreve('ola','input',2) -> digita no terceiro input
         - zap.escreve('ola','div.abreInput') -> foca no div (click/focus) e digita (via elemento ativo)
+        Retorna False se selector+index não existirem.
         """
         try:
             # caso sem selector: digita no elemento ativo (body)
@@ -293,14 +324,11 @@ class Web:
             if not elems:
                 return False
 
-            if index is None:
-                index = 0
-            if index < 0:
-                index = 0
-            if index >= len(elems):
+            idx = self._validate_index(elems, index)
+            if idx is None:
                 return False
 
-            elem = elems[index]
+            elem = elems[idx]
 
             # tenta identificar se é input/textarea/select ou contenteditable
             tag = ''
@@ -318,7 +346,7 @@ class Web:
 
             # foca no elemento primeiro
             try:
-                self.focus(selector, index)
+                self.focus(selector, idx)
             except Exception:
                 pass
 
@@ -444,13 +472,16 @@ class Web:
             print(f"teclado error: {e}")
             return False
 
-    def attr(self, selector, nome_atributo):
-        """Retorna o valor do primeiro elemento encontrado ou False se não existir"""
+    def attr(self, selector, nome_atributo, index=0):
+        """Retorna o valor do elemento no índice informado ou False se não existir"""
         elems = self._find(selector)
         if not elems:
             return False
+        idx = self._validate_index(elems, index)
+        if idx is None:
+            return False
         try:
-            val = elems[0].get_attribute(nome_atributo)
+            val = elems[idx].get_attribute(nome_atributo)
             return val
         except Exception:
             return False
@@ -635,9 +666,3 @@ if __name__ == '__main__':
     zap.arquivo('relatorio/test.txt', 'Fim\n', modo='-')
     print('abre arquivo:', zap.abre('relatorio/test.txt'))
     zap.quit()
-
-
-
-'''
-
-'''
