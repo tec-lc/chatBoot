@@ -95,8 +95,9 @@ while start == True:
         print(qrcod)
         zap.arquivo('relatorio.html',qrcod)
 
+        val_bntNaoLidas=zap.html(id_bntNaoLidas)
 
-        if mensagensQr == False:
+        if mensagensQr == False and val_bntNaoLidas!=False:
             executa = 'carregandoMsg'
             print('carregandoMsg')
             zap.arquivo('relatorio.html','carregandoMsg')
@@ -162,4 +163,4 @@ while start == True:
         #start = False
 
 
-input("sessão fechou...")
+#input("sessão fechou...")

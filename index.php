@@ -208,7 +208,7 @@
 
     function offBoot(){//-------
       //alert('desconectar');
-      //exe=true;
+      exe=true;
       carregandoOff();
       $.post('servidor/finalizarConexao.php', {start: 'start'}, function(resposta) {
         console.log('stop:', resposta);
