@@ -1,7 +1,7 @@
 
 from class_web import Web
 
-zap=Web(headless=False)
+zap=Web(headless=True)
 zap.sessao('sessao_bootzap')
 zap.url('https://web.whatsapp.com')
 zap.arquivo('relatorio.html','carregandoQr')
@@ -75,10 +75,12 @@ start=True
 executa='carregandoQr'
 mensagensQr=True
 click_naoLidas=False
+
 while start == True:
     close = str( zap.abre('bootClose.html') ).strip()
     zap.arquivo('bootClose.html','')
-    print(close);
+    #print(close);
+    #zap.arquivo('relatorio.html','<>carregandoQr<>Aguarde!<>')
     zap.pause(1)
     if close == 'close' :
         zap.sessao_salve()
@@ -92,14 +94,14 @@ while start == True:
         mensagensQr=zap.html(id_mensagensQr)
 
         qrcod = zap.attr(id_qrcode,attr_qrcod)
-        print(qrcod)
-        zap.arquivo('relatorio.html',qrcod)
+        print('qrcodPareado',qrcod)
+        zap.arquivo('relatorio.html','<>qrcodPareado<>'+ str(qrcod) +'<>')
 
         val_bntNaoLidas=zap.html(id_bntNaoLidas)
 
         if mensagensQr == False:
             print('carregandoMsg')
-            zap.arquivo('relatorio.html','carregandoMsg')
+            zap.arquivo('relatorio.html','<>carregandoMsg<>Sistema carregando informações!<>')
 
         if mensagensQr == False and val_bntNaoLidas!=False:
             executa = 'carregandoMsg'
@@ -107,12 +109,12 @@ while start == True:
     elif executa == 'carregandoMsg' :
         val_bntNaoLidas=zap.html(id_bntNaoLidas)
         print('aguardandoMsg')
-        zap.arquivo('relatorio.html','aguardandoMsg')
+        zap.arquivo('relatorio.html','<>aguardandoMsg<>Aguardando receber mensagens<>')
 
         if val_bntNaoLidas != False :
             executa = 'boot'
             print('aguardandoMsg')
-            zap.arquivo('relatorio.html','aguardandoMsg')
+            zap.arquivo('relatorio.html','<>aguardandoMsg<>Verificando aba Não Lidas<>')
 
             zap.click(id_bntNaoLidas,1)#abre não lidas
             zap.pause(3)
@@ -124,7 +126,8 @@ while start == True:
 
         #nanhumaCoversa = zap.html(id_nanhumaCoversa,cont_msg)
         convesaResponder = zap.html(id_cliente,cont_msg)
-        print('contador(',cont_msg,') criente(',convesaResponder,')')
+        #print('contador(',cont_msg,') criente(',convesaResponder,')')
+
         zap.pause(1)
         #if nanhumaCoversa == True:
         #    zap.click(id_bntNaoLidas,1)#fecha não lidas
@@ -134,7 +137,7 @@ while start == True:
         if convesaResponder!=False:
 
             print('abrindo não lidas')
-
+            zap.arquivo('relatorio.html','<>boot<>Lendo Ultima Mensagem de: '+ str(convesaResponder)+'<>')
 
             zap.arquivo('relatorio.html','boot')
 
@@ -146,13 +149,15 @@ while start == True:
 
             if ultimaCoversa != False :
                 ultimaCoversa=ultimaCoversa[-3].get('text', False)
-    
+
                 #ultimaCoversa=ultimaCoversa[-3]['text']
                 print(ultimaCoversa)
+                zap.arquivo('relatorio.html','<>boot<>'+ str(convesaResponder)+': '+ str(ultimaCoversa)+'<>')
 
                 zap.pause(1)
                 VaiResponder=respostaCorreta(ultimaCoversa);
                 if VaiResponder != False :
+                    zap.arquivo('relatorio.html','<>boot<>Respondendo '+ str(convesaResponder)+'<>')
                     zap.escreve(respostaCorreta(ultimaCoversa),id_inputCoversa)
                     zap.teclado('enter')
                     cont_msg+= 1

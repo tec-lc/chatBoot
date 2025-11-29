@@ -61,6 +61,9 @@
             Aguarde!<br>
             Pareando Qrcode...
           </div>
+          <div class="user dados_reais" id="username">
+            retorno:
+          </div>
 
           <div class="actions">
             <button id="btnCancel" class="ghost btnCancel" title="Cancelar pareamento">Cancelar pareamento</button>
@@ -74,7 +77,9 @@
             Login autenticado!<br>
             Carregando Mensagens...
           </div>
-
+          <div class="user dados_reais" id="username">
+            retorno:
+          </div>
           <div class="actions">
             <button id="btnCancel" class="ghost btnCancel" title="Cancelar pareamento">Desconectar</button>
           </div>
@@ -85,6 +90,9 @@
           <div class="user" id="username">
             Mensagens carregadas!<br>
             Aguardando Mensagens para iniciar boot...
+          </div>
+          <div class="user dados_reais" id="username">
+            retorno:
           </div>
           <div class="actions">
             <button id="btnCancel" class="ghost btnCancel" title="Cancelar pareamento">Desconectar</button>
@@ -98,6 +106,9 @@
             Boot em andamento!<br>
             Respondendo mensagens...
           </div>
+          <div class="user dados_reais" id="username">
+            retorno:
+          </div>
           <div class="actions">
             <button id="btnCancel" class="ghost btnCancel" title="Cancelar pareamento">Desconectar</button>
           </div>
@@ -110,6 +121,9 @@
             Finalizando boot!<br>
             Desconectando...
           </div>
+          <div class="user dados_reais" id="username">
+            retorno:
+          </div>
         </div>
 
 
@@ -117,18 +131,21 @@
           <div class="user" id="username">
             Boot Finalisado!
           </div>
+          <div class="user dados_reais" id="username">
+            retorno:
+          </div>
 
           <div class="actions">
             <button id="btnProgram">Iniciar novamente</button>
-            <button id="btnCancel" class="ghost btnCancel" title="Cancelar pareamento">Cancelar pareamento</button>
+          
           </div>
-          <div class="panel" id="panel">
+          <!--<div class="panel" id="panel">
             <div class="small">Escreva aqui as respostas automáticas que deseja programar. Use uma resposta por linha.</div>
             <textarea id="responsesArea" placeholder="Ex: Olá! Estou ocupado no momento. Retorno em breve..."></textarea>
             <div class="panel-actions">
               <button id="saveBtn">Salvar</button>
             </div>
-          </div>
+          </div>-->
         </div>
 
 
@@ -145,6 +162,10 @@
           </div>
           <div class="user" id="username">
             Para iniciar o chatBoot aponte seu autenticador do WhatsApp
+          </div>
+
+          <div class="user dados_reais" id="username">
+            retorno:
           </div>
 
           <div class="actions">
@@ -165,6 +186,7 @@
 
   <script>
   $(document).ready(function() {
+
 
 
     function carregandoQr(){//-------
@@ -200,6 +222,7 @@
 
     function startBoot(){//-------
       exe=false;
+      $('button').attr('style','');
       carregandoQr();
       $.post('servidor/startBoot.php', {start: 'start'}, function(resposta) {
         console.log('start:', resposta);
@@ -232,23 +255,27 @@
       //console.log('retornou: ',data);
 
       if(exe==false){
-        if(data=='carregandoQr'){
+        data=data.split('<>');
+        console.log(data);
+
+        if(data[1]=='carregandoQr'){
           carregandoQr();
-        }else if(data=='carregandoMsg'){
+        }else if(data[1]=='carregandoMsg'){
           carregandoMsg();
-        }else if(data=='aguardandoMsg'){
+        }else if(data[1]=='aguardandoMsg'){
           aguardandoMsg();
-        }else if(data=='boot'){
+        }else if(data[1]=='boot'){
           boot();
-        }else if(data=='carregandoOff'){
+        }else if(data[1]=='carregandoOff'){
           carregandoOff();
-        }else if(data=='off'){
+        }else if(data[1]=='off'){
           off();
-        }else{
+        }else if(data[1]=='qrcodPareado'){
           qrcodPareado();
-          new Qr('#qrCanvas', { size: 200 }).set(data);
-          console.log(data);
+          new Qr('#qrCanvas', { size: 200 }).set(data[2]);
+          console.log(data[2]);
         }
+        $('.dados_reais').html(data[2]);
 
       }
 
@@ -257,6 +284,7 @@
     // configure conforme necessário
     $('button[class="ghost btnCancel"]').click(function(){
       //alert('click');
+      $(this).attr('style','display:none;');
       offBoot();
     });
     $('button[id="btnProgram"]').click(function(){
