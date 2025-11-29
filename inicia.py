@@ -16,7 +16,49 @@ attr_qrcod='data-ref'
 
 id_bntNaoLidas='button[aria-controls="chat-list"]'
 
-id_cliente='div[class="_ak72 false false false _ak73 _ak7n _asiw _ap1- _ap1_"]'
+#id_cliente='div[class="_ak72 false false false _ak73 _ak7n _asiw _ap1- _ap1_"]'
+id_cliente='div[class="x10l6tqk xh8yej3 x1g42fcv"]'
+
+id_inputCoversa='div[class="x1n2onr6 xh8yej3 xjdcl3y lexical-rich-text-input"]'
+
+id_nanhumaCoversa='div[class="x1c436fg"]'
+id_ultimaCoversa='div[class="_amk6 _amlo false false"] div div div span span'
+
+res_inicio = (
+    "Olá tudo bem?\n"
+    "(1) Quero ser associado\n"
+    "(2) Pagar minha conta\n"
+    "(3) Falar com atendente\n"
+)
+
+res_1 = (
+    "Para ser associado existem 2 planos!\n"
+    "(a) Plano Premium 19,90 por mês\n"
+    "(b) Plano Mediano 10,30 por mês\n"
+)
+
+res_2 = "Para pagar sua conta escreva seu RG:"
+res_3 = "Aguarde que você já será atendido(a):"
+res_planos = "Parabéns por assinar seu Plano!"
+res_rg = "RG confirmado! Sua conta foi enviada por email."
+
+respostas = {
+    "Bom dia": res_inicio,
+    "bom dia": res_inicio,
+    "Menu": res_inicio,
+    "menu": res_inicio,
+    '1': res_1,
+    '2': res_2,
+    '3': res_3,
+    "a": res_planos,
+    "b": res_planos,
+    "A": res_planos,
+    "B": res_planos,
+    '123': res_rg,
+}
+def respostaCorreta(texto):
+    texto = str(texto).strip()
+    return respostas.get(texto, False)
 
 
 
@@ -34,7 +76,7 @@ executa='carregandoQr'
 mensagensQr=True
 click_naoLidas=False
 while start == True:
-    close = zap.abre('bootClose.html')
+    close = str( zap.abre('bootClose.html') ).strip()
     zap.arquivo('bootClose.html','')
     print(close);
     zap.pause(1)
@@ -65,31 +107,56 @@ while start == True:
         zap.arquivo('relatorio.html','aguardandoMsg')
 
         if val_bntNaoLidas != False :
-
-            zap.click(id_bntNaoLidas,1)
-            print('abrindo não lidas')
-            zap.arquivo('relatorio.html','boot')
             executa = 'boot'
+            print('aguardandoMsg')
+            zap.arquivo('relatorio.html','aguardandoMsg')
+
+            zap.click(id_bntNaoLidas,1)#abre não lidas
             zap.pause(3)
+            cont_msg=0
 
     elif executa == 'boot' :
 
-        valor = zap.html(id_cliente)
-        if valor!=False:
-            zap.click(id_cliente)
-            zap.pause(3)
-            zap.escreve('Olá! Tudo bem?')
+        zap.pause(1)
+
+        #nanhumaCoversa = zap.html(id_nanhumaCoversa,cont_msg)
+        convesaResponder = zap.html(id_cliente,cont_msg)
+        print('contador(',cont_msg,') criente(',convesaResponder,')')
+        zap.pause(1)
+        #if nanhumaCoversa == True:
+        #    zap.click(id_bntNaoLidas,1)#fecha não lidas
+        #    zap.pause(3)
+
+
+        if convesaResponder!=False:
+
+            print('abrindo não lidas')
+
+
+            zap.arquivo('relatorio.html','boot')
+
+            zap.click(id_cliente,cont_msg)
             zap.pause(1)
-            zap.teclado('enter')
-            zap.pause(1)
-            zap.escreve(
-                "1 - Quero resolver minhas finanças\n"
-                "2 - Problemas pessoais\n"
-                "3 - Falar com atendente\n"
-            )
-            zap.pause(1)
-            zap.teclado('enter')
-            zap.pause(30)
+            #----obter ultima conversa
+            ultimaCoversa=zap.html_array(id_ultimaCoversa)
+            ultimaCoversa=ultimaCoversa[-3]['html']
+            print(ultimaCoversa)
+
+            if ultimaCoversa != False :
+                zap.pause(1)
+                VaiResponder=respostaCorreta(ultimaCoversa);
+                if VaiResponder != False :
+                    zap.escreve(respostaCorreta(ultimaCoversa),id_inputCoversa)
+                    zap.teclado('enter')
+                    cont_msg+= 1
+
+        else :
+            cont_msg=0
+
+
+
+
+
         #verificar mensagem
         #zap.arquivo('relatorio.html','off')
         #start = False

@@ -127,19 +127,29 @@ class Web:
         except Exception:
             return []
 
-    def html(self, selector):
+    def html(self, selector, index=0):
         """
-        RETORNO ALTERADO: retorna o TEXTO do primeiro elemento encontrado ou False se não encontrar.
-        Para obter todos os elementos em array use html_array(selector).
+        Retorna o TEXTO do elemento indicado.
+        - html('p') -> pega o primeiro <p>
+        - html('p', 0) -> pega o primeiro <p>
+        - html('p', 2) -> pega o terceiro <p>
         """
         elems = self._find(selector)
         if not elems:
             return False
-        e = elems[0]
+
+        if index < 0:
+            index = 0
+        if index >= len(elems):
+            return False
+
+        el = elems[index]
+
         try:
-            return e.text
+            return el.text
         except Exception:
             return False
+
 
     def html_array(self, selector):
         """Retorna lista de dicionários [{'text':..., 'html':...}, ...] ou [] se não existir"""
@@ -183,43 +193,191 @@ class Web:
                 return False
 
 
-    def escreve(self, texto, selector=None, clear=False, delay_between_keys=0.01):
+    def focus(self, selector=None, index=0):
         """
-        Escreve texto simulando teclado. Se selector for None, envia ao elemento ativo (body).
-        clear: limpar antes
-        delay_between_keys: intervalo entre caracteres
+        Foca no elemento indicado pelo selector (CSS) e índice.
+        - selector=None -> foca no body
+        - retorna True se conseguiu focar, False caso contrário
+        Ex:
+          zap.focus('input')        # foca no primeiro input
+          zap.focus('input', 2)     # foca no terceiro input
         """
-        target = None
-        if selector:
+        try:
+            if selector is None:
+                # foco no body
+                body = self._driver.find_element(By.TAG_NAME, 'body')
+                try:
+                    body.click()
+                except Exception:
+                    pass
+                return True
+
             elems = self._find(selector)
             if not elems:
                 return False
-            target = elems[0]
-            try:
-                if clear:
-                    target.clear()
-                for ch in str(texto):
-                    target.send_keys(ch)
-                    if delay_between_keys:
-                        time.sleep(delay_between_keys)
-                return True
-            except Exception as e:
-                print(f"escreve error: {e}")
+
+            if index < 0:
+                index = 0
+            if index >= len(elems):
                 return False
-        else:
+
+            el = elems[index]
             try:
-                body = self._driver.find_element(By.TAG_NAME, 'body')
-                if clear:
-                    # não há clear para body
+                # tenta focus via JS (mais robusto)
+                self._driver.execute_script("arguments[0].scrollIntoView({behavior:'auto',block:'center'}); arguments[0].focus();", el)
+                try:
+                    el.click()
+                except Exception:
                     pass
-                for ch in str(texto):
-                    body.send_keys(ch)
-                    if delay_between_keys:
-                        time.sleep(delay_between_keys)
                 return True
-            except Exception as e:
-                print(f"escreve error body: {e}")
+            except Exception:
+                try:
+                    el.click()
+                    return True
+                except Exception:
+                    return False
+        except Exception as e:
+            print(f"focus error: {e}")
+            return False
+
+
+    def escreve(self, texto, selector=None, index=0, clear=False, delay_between_keys=0.01):
+        """
+        Escreve texto simulando teclado.
+        - selector: CSS selector do elemento (ex: 'input', "div.abreInput", "input[name='pesquise']")
+        - index: índice do elemento quando selector seleciona vários (padrão 0)
+        - clear: se True, limpa o campo (quando possível) antes de digitar
+        - delay_between_keys: intervalo entre caracteres
+
+        Comportamentos:
+        - zap.escreve('ola tudobem') -> digita no elemento atualmente focado (body.send_keys)
+        - zap.escreve('ola','input') -> digita no primeiro input
+        - zap.escreve('ola','input',2) -> digita no terceiro input
+        - zap.escreve('ola','div.abreInput') -> foca no div (click/focus) e digita (via elemento ativo)
+        """
+        try:
+            # caso sem selector: digita no elemento ativo (body)
+            if selector is None:
+                try:
+                    active = self._driver.switch_to.active_element
+                    # se for um input/textarea, use send_keys diretamente
+                    tag = active.tag_name.lower() if active else ''
+                    if active and tag in ('input', 'textarea', 'select'):
+                        if clear:
+                            try:
+                                active.clear()
+                            except Exception:
+                                pass
+                        for ch in str(texto):
+                            active.send_keys(ch)
+                            if delay_between_keys:
+                                time.sleep(delay_between_keys)
+                        return True
+                    else:
+                        # digita no body (ou elemento ativo) via Actions
+                        body = self._driver.find_element(By.TAG_NAME, 'body')
+                        if clear:
+                            # não há clear para body
+                            pass
+                        for ch in str(texto):
+                            body.send_keys(ch)
+                            if delay_between_keys:
+                                time.sleep(delay_between_keys)
+                        return True
+                except Exception as e:
+                    print(f"escreve error (no selector): {e}")
+                    return False
+
+            # se selector informado: encontra elemento pelo selector e index
+            elems = self._find(selector)
+            if not elems:
                 return False
+
+            if index is None:
+                index = 0
+            if index < 0:
+                index = 0
+            if index >= len(elems):
+                return False
+
+            elem = elems[index]
+
+            # tenta identificar se é input/textarea/select ou contenteditable
+            tag = ''
+            try:
+                tag = elem.tag_name.lower()
+            except Exception:
+                pass
+            contenteditable = ''
+            try:
+                contenteditable = elem.get_attribute('contenteditable') or ''
+            except Exception:
+                contenteditable = ''
+
+            is_form_field = tag in ('input', 'textarea', 'select') or (contenteditable.lower() == 'true')
+
+            # foca no elemento primeiro
+            try:
+                self.focus(selector, index)
+            except Exception:
+                pass
+
+            if is_form_field:
+                try:
+                    if clear:
+                        try:
+                            elem.clear()
+                        except Exception:
+                            # fallback: select all + delete
+                            try:
+                                elem.send_keys(Keys.CONTROL + 'a')
+                                elem.send_keys(Keys.DELETE)
+                            except Exception:
+                                pass
+                    for ch in str(texto):
+                        elem.send_keys(ch)
+                        if delay_between_keys:
+                            time.sleep(delay_between_keys)
+                    return True
+                except Exception as e:
+                    # fallback para enviar ao elemento ativo
+                    try:
+                        active = self._driver.switch_to.active_element
+                        for ch in str(texto):
+                            active.send_keys(ch)
+                            if delay_between_keys:
+                                time.sleep(delay_between_keys)
+                        return True
+                    except Exception:
+                        print(f"escreve error (form_field fallback): {e}")
+                        return False
+            else:
+                # não é campo de formulário: focamos e enviamos para o elemento ativo
+                try:
+                    # after focus, active element should be the target or body — use actions to type
+                    actions = ActionChains(self._driver)
+                    for ch in str(texto):
+                        actions.send_keys(ch)
+                        actions.pause(delay_between_keys)
+                    actions.perform()
+                    return True
+                except Exception as e:
+                    # última tentativa: enviar ao body
+                    try:
+                        body = self._driver.find_element(By.TAG_NAME, 'body')
+                        for ch in str(texto):
+                            body.send_keys(ch)
+                            if delay_between_keys:
+                                time.sleep(delay_between_keys)
+                        return True
+                    except Exception:
+                        print(f"escreve error (non-form fallback): {e}")
+                        return False
+
+        except Exception as e:
+            print(f"escreve unexpected error: {e}")
+            return False
+
 
     def _parse_key_sequence(self, tecla: str):
         """Converte strings como 'ctrl+shift+t' em uma lista de Keys ou caracteres."""
@@ -477,3 +635,9 @@ if __name__ == '__main__':
     zap.arquivo('relatorio/test.txt', 'Fim\n', modo='-')
     print('abre arquivo:', zap.abre('relatorio/test.txt'))
     zap.quit()
+
+
+
+'''
+
+'''
